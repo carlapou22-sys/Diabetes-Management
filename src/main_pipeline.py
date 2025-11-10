@@ -1,8 +1,8 @@
 """
 Main pipeline for CGM meal detection project.
 """
-from preprocessing.preprocess import preprocess_patient
-from windowing.window_size import window_size
+
+
 import pandas as pd
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -15,6 +15,8 @@ from preprocessing.preprocess import preprocess_patient
 from windowing.window_size import window_size
 from preprocessing.preprocess_plotting import plot_preprocessed_segments
 from windowing.window_plotting import visualize_windows  # adjust path if needed
+from models.lstm_trainer import train_lstm
+
 
 if __name__ == "__main__":
     # Step 1 — Load data
@@ -56,6 +58,12 @@ if __name__ == "__main__":
     # Visualize windows
     # visualize_windows(segments, window_minutes=120, stride_minutes=45, max_windows=10)
 
+
+    # Step 6
+    X, y, meta = window_size(segments, window_minutes=120, stride_minutes=45, sample_every=5)
+
+    # Train the model
+    model, hist, best_t = train_lstm(X, y)
 
     '''
     # For looping through all patients, apply this:
