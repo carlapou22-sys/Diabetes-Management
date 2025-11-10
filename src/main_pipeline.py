@@ -16,6 +16,7 @@ from windowing.window_size import window_size
 from preprocessing.preprocess_plotting import plot_preprocessed_segments
 from windowing.window_plotting import visualize_windows  # adjust path if needed
 from models.lstm_trainer import train_lstm
+from models.lstm_gridsearch import run_personalized_lstm_search
 
 
 if __name__ == "__main__":
@@ -30,7 +31,6 @@ if __name__ == "__main__":
     # Step 3 — Plot
    # plot_meal_counts(summary_df)
 
-   # Stp 4 - Preprocessing
 
     # Step 4 — Preprocessing
     df = data["596-ws-training_processed"]
@@ -64,6 +64,10 @@ if __name__ == "__main__":
 
     # Train the model
     model, hist, best_t = train_lstm(X, y)
+
+
+    # Step 7 — Run personalized hyperparameter search (optional heavy step)
+    run_personalized_lstm_search(data)
 
     '''
     # For looping through all patients, apply this:
