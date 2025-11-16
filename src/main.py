@@ -3,6 +3,10 @@ from utils.summary import build_summary
 from preprocessing.preprocess import preprocess_patient
 from windowing.window_size import window_size
 from models.lstm_gridsearch import run_personalized_lstm_search
+from models.lstm_generalized import run_global_lstm_search  # NEW
+
+from utils.summary import build_label_summary, plot_label_counts  # moved up
+from models.lstm_generalized import run_global_lstm_search
 
 
 # ---------- PIPELINE 1: Single-patient pipeline ----------
@@ -61,8 +65,6 @@ def run_all_patients_individual(data):
 
     # ===== After training all patients: Label summary =====
     if model_input_data:
-        from utils.summary import build_label_summary, plot_label_counts
-
         label_summary = build_label_summary(model_input_data)
         label_summary.to_csv("results/lstm_gridsearch/label_summary.csv", index=False)
 
@@ -76,26 +78,39 @@ def run_all_patients_individual(data):
 def run_generalized_model(data):
     print("\n=== Running GENERALIZED model across all patients ===")
     all_segments = []
+
     for patient_key, df in data.items():
-        if "training" not in patient_key:
+        if "training" not in patient_key.lower():
             continue
         try:
-            segments, _ = preprocess_patient(df, time_col="5minute_intervals_timestamp", cbg_col="cbg")
+            print(f"\n=== Preprocessing {patient_key} ===")
+            segments, _ = preprocess_patient(
+                df,
+                time_col="5minute_intervals_timestamp",
+                cbg_col="cbg",
+                normalize=True,
+                long_gap_thresh=120,
+            )
             all_segments.extend(segments)
         except Exception as e:
             print(f"⚠️ Skipping {patient_key}: {e}")
+
+    if not all_segments:
+        print("⚠️ No segments collected, cannot train global model.")
+        return
+
     # Combine all patients into one big dataset
-    X, y, meta = window_size(all_segments, window_minutes=120, stride_minutes=45, sample_every=5)
+    X, y, meta = window_size(
+        all_segments,
+        window_minutes=120,
+        stride_minutes=45,
+        sample_every=5,
+    )
     print(f"🧩 Combined dataset: {len(X)} windows ({y.sum()} positive).")
-    model_input_data = {"Generalized_Model": {"X": X, "y": y, "meta": meta}}
-    run_personalized_lstm_search(model_input_data)
 
+    run_global_lstm_search(X, y, meta)
 
-
-# Count how many 0 and 1 per patient
-from utils.summary import build_label_summary, plot_label_counts  # add near top of file
-
-
+# ---------- LABEL DISTRIBUTION ONLY ----------
 def run_label_distribution_overview(data):
     """
     Preprocess + window ALL training patients,
@@ -148,17 +163,14 @@ def run_label_distribution_overview(data):
     plot_label_counts(label_summary)
 
 
-
-
-
-#MAIN
+# ---------- MAIN ----------
 if __name__ == "__main__":
     base_dir = r"C:\Users\carla\Documents\Master\Third Semester\Diabetes\Ohio Data\Ohio Data"
     data = load_patient_data(base_dir)
     summary_df = build_summary(data)
 
     # Choose which pipeline to run:
-    mode = "all"  # options: "single", "all", "generalized", "labels_only"
+    mode = "generalized"  # options: "single", "all", "generalized", "labels_only"
 
     if mode == "single":
         run_single_patient_pipeline(data, "588-ws-training_processed")  # <--- select patient
