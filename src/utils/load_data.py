@@ -16,7 +16,7 @@ def load_patient_data(base_dir="../data/Ohio Data"):
         for split in splits:
             folder = os.path.join(base_dir, dataset, split)
             files = glob.glob(os.path.join(folder, "*.csv"))
-            print(f"📂 {dataset}/{split}: found {len(files)} files")
+            print(f" {dataset}/{split}: found {len(files)} files")
             for f in files:
                 name = os.path.splitext(os.path.basename(f))[0]
 

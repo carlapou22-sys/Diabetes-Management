@@ -154,13 +154,30 @@ def preprocess_patient(df, cbg_col="cbg", time_col="5minute_intervals_timestamp"
                                    medium_gap_thresh=medium_gap_thresh,
                                    long_gap_thresh=long_gap_thresh)
 
-    # Normalize & add relative time
+    #  Patient-level normalization
+    # collect all cbg values from all segments
+    if normalize:
+        all_cbg = pd.concat([seg[cbg_col] for seg in segments])
+        patient_min = all_cbg.min()
+        patient_max = all_cbg.max()
+
+        # avoid division by zero
+        if patient_max == patient_min:
+            patient_max = patient_min + 1e-6
+    else:
+        patient_min, patient_max = None, None
+
+    # Normalize & add relative time based on patient-wide min/max
     norm_segments = []
     for seg in segments:
         seg = seg.copy()
+
+        # relative time index
         seg["time_minutes"] = np.arange(len(seg)) * 5
+
         if normalize:
-            seg, _, _ = normalize_cgm(seg, cbg_col)
+            seg[cbg_col] = (seg[cbg_col] - patient_min) / (patient_max - patient_min)
+
         norm_segments.append(seg)
 
     summary = {
